@@ -1,0 +1,14 @@
+steps:
+- name: 'gcr.io/cloud-builders/go'
+  args: ['get']
+  env: ['PROJECT_ROOT=go-gvacli']
+- name: 'gcr.io/cloud-builders/go'
+  args: ['install', '.']
+  env: ['PROJECT_ROOT=go-gvacli']
+- name: 'gcr.io/cloud-builders/go'
+  args: ['build', 'go-gvacli']
+  env: ['PROJECT_ROOT=go-gvacli']
+artifacts:
+  objects:
+    location: 'gs://go-gvacli/'
+    paths: ['go-gvacli']
