@@ -15,7 +15,8 @@ action "build linux/amd64" {
   args = "build ./..."
 }
 
-actions "build windows/amd64" {
+action "build windows/amd64" {
+  uses = "actions-contrib/go@master"
   env = {
     GOOS = "windows"
     GOARCH = "amd64"
