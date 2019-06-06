@@ -13,10 +13,6 @@ Just a Go version of https://github.com/nbarrientos/gvacli for Linux and Windows
 
 ![Screenshot](screenshot.png)
 
-# Builds
-
-Latest build can be downloaded from [here](https://storage.googleapis.com/go-gvacli/go-gvacli)
-
 ## Source of data
 
 Comes from GVA Airport website: https://gva.ch
