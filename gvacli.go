@@ -1,12 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
-	"sort"
 	"strings"
 	"time"
 
@@ -17,28 +18,18 @@ import (
 
 // Some useful timestamps and values
 var (
-	ReqTimeFormat     = "2006-01-02 15:04:05"
-	JSONTimeFormat    = "02-01-2006 15:04:05"
 	DisplayTimeFormat = "02-01-2006 15:04"
+	JSONTimeFormat    = "02.01.2006 15:04"
 	APIUrl            string
 	APITimeout        int
-	AllFlights        bool
+	Departures        bool
+	Arrivals          bool
+	ShowCodeShare     bool
 )
 
 // GVATime is just used to convert the "custom" date
 type GVATime struct {
 	time.Time
-}
-
-// UnmarshalJSON is a Custom parser for date format
-func (me *GVATime) UnmarshalJSON(b []byte) (err error) {
-	s := strings.Trim(string(b), "\"")
-	if s == "null" {
-		me.Time = time.Time{}
-		return
-	}
-	me.Time, err = time.Parse(JSONTimeFormat, s)
-	return
 }
 
 func (me *GVATime) String() string {
@@ -53,6 +44,33 @@ type FlightStatus struct {
 	status string
 }
 
+// "Took off", "Cancelled, "Departed", "Boarding", "Go to gate"
+func (me *FlightStatus) String() string {
+	switch status := me.status; status {
+	case "Boarding":
+		c := color.New(color.FgGreen).Add(color.BlinkSlow)
+		return c.Sprintf(status)
+	case "Go to gate":
+		c := color.New(color.FgGreen).Add(color.BlinkSlow)
+		return c.Sprintf(status)
+	case "Arrived":
+		c := color.New(color.FgGreen).Add(color.BlinkSlow)
+		return c.Sprintf(status)
+	case "Departed":
+		c := color.New(color.FgYellow).Add(color.BlinkSlow)
+		return c.Sprintf(status)
+	case "Delayed":
+		c := color.New(color.FgYellow).Add(color.BlinkSlow)
+		return c.Sprintf(status)
+	case "Cancelled":
+		c := color.New(color.BgRed).Add(color.BlinkSlow)
+		return c.Sprintf(status)
+	default:
+		c := color.New(color.FgWhite)
+		return c.Sprintf(status)
+	}
+}
+
 // UnmarshalJSON is a custom parser for flight status
 func (me *FlightStatus) UnmarshalJSON(b []byte) (err error) {
 	s := strings.Trim(string(b), "\"")
@@ -64,101 +82,69 @@ func (me *FlightStatus) UnmarshalJSON(b []byte) (err error) {
 	return
 }
 
-func (me *FlightStatus) String() string {
-	switch status := me.status; status {
-	case "Boarding":
-		c := color.New(color.FgGreen).Add(color.BlinkSlow)
-		return c.Sprintf(status)
-	case "Delayed":
-		c := color.New(color.FgYellow).Add(color.BlinkSlow)
-		return c.Sprintf(status)
-	case "Cancelled":
-		c := color.New(color.BgRed).Add(color.BlinkSlow)
-		return c.Sprintf(status)
-	default:
-		return color.GreenString(status)
-	}
-}
-
-// Arrival contains relevant data extracted during JSON unmarshalling
-type Arrival struct {
-	SAircraftRegistration         string       `json:"sAircraftRegistration"`
-	SFlightIdentity               string       `json:"sFlightIdentity"`
-	SDelay                        string       `json:"sDelay"`
-	SAirport                      string       `json:"sAirport"`
-	STerminal                     string       `json:"sTerminal"`
-	SAircraft                     string       `json:"sAircraft"`
-	SFlightStatus                 FlightStatus `json:"sFlightStatus"`
-	SCompany                      string       `json:"sCompany"`
-	STrueFlightStatus             string       `json:"sTrueFlightStatus"`
-	SFieldLabel                   string       `json:"sFieldLabel"`
-	SAirportCode                  string       `json:"sAirportCode"`
-	SFlightType                   string       `json:"sFlightType"`
-	SFlightDuration               string       `json:"sFlightDuration"`
-	IFlightDurationMinuts         string       `json:"iFlightDurationMinuts"`
-	SOriginCountry                string       `json:"sOriginCountry"`
-	SDestCountry                  string       `json:"sDestCountry"`
-	SDestCountryVia               string       `json:"sDestCountryVia"`
-	BControleDouane               string       `json:"bControleDouane"`
-	IDelayMinuts                  string       `json:"iDelayMinuts"`
-	State                         string       `json:"state"`
-	SCarousel                     string       `json:"sCarousel"`
-	DScheduledArrival             GVATime      `json:"dScheduledArrival"`
-	DPublicArrival                GVATime      `json:"dPublicArrival"`
-	DLastUpdate                   GVATime      `json:"dLastUpdate"`
-	DAirbornFromPreviousAirport   GVATime      `json:"dAirbornFromPreviousAirport"`
-	DDepartureFromPreviousAirport GVATime      `json:"dDepartureFromPreviousAirport"`
-	DExpectedBaggageDelivery      GVATime      `json:"dExpectedBaggageDelivery"`
-	DScheduledFlight              GVATime      `json:"dScheduledFlight"`
-}
-
-// Departure contains relevant data extracted during JSON unmarshalling
-type Departure struct {
-	SAircraftRegistration string       `json:"sAircraftRegistration"`
-	SFlightIdentity       string       `json:"sFlightIdentity"`
-	SDelay                string       `json:"sDelay"`
-	SAirport              string       `json:"sAirport"`
-	STerminal             string       `json:"sTerminal"`
-	SAircraft             string       `json:"sAircraft"`
-	SFlightStatus         FlightStatus `json:"sFlightStatus"`
-	SGate                 string       `json:"sGate"`
-	SGateStatus           string       `json:"sGateStatus"`
-	SCheckinDesks         string       `json:"sCheckinDesks"`
-	SCompany              string       `json:"sCompany"`
-	SFieldLabel           string       `json:"sFieldLabel"`
-	SFlightType           string       `json:"sFlightType"`
-	BControleDouane       string       `json:"bControleDouane"`
-	IDelayMinuts          string       `json:"iDelayMinuts"`
-	DAirborn              GVATime      `json:"dAirborn"`
-	DEstimatedBoarding    GVATime      `json:"dEstimatedBoarding"`
-	DScheduledDeparture   GVATime      `json:"dScheduledDeparture"`
-	DPublicDeparture      GVATime      `json:"dPublicDeparture"`
+// Flight contains relevant data extracted during JSON unmarshalling
+type Flight struct {
+	ID                     string `json:"ID"`
+	Type                   string `json:"Type"`
+	DepartureScheduled     GVATime
+	DepartureScheduledTime string `json:"DepartureScheduledTime"`
+	DepartureScheduledDate string `json:"DepartureScheduledDate"`
+	DepartureExpected      GVATime
+	DepartureExpectedTime  string `json:"DepartureExpectedTime"`
+	DepartureExpectedDate  string `json:"DepartureExpectedDate"`
+	ArrivalScheduled       GVATime
+	ArrivalScheduledTime   string `json:"ArrivalScheduledTime"`
+	ArrivalScheduledDate   string `json:"ArrivalScheduledDate"`
+	ArrivalExpected        GVATime
+	ArrivalExpectedTime    string       `json:"ArrivalExpectedTime"`
+	ArrivalExpectedDate    string       `json:"ArrivalExpectedDate"`
+	Delay                  int          `json:"Delay"`
+	Destination            string       `json:"Destination"`
+	DestinationShort       string       `json:"DestinationShort"`
+	Departure              string       `json:"Departure"`
+	DepartureShort         string       `json:"DepartureShort"`
+	Airline                string       `json:"Airline"`
+	Aircraft               string       `json:"Aircraft"`
+	Name                   string       `json:"Name"`
+	Status                 FlightStatus `json:"Status"`
+	StatusClass            string       `json:"StatusClass"`
+	StatusDetails          string       `json:"StatusDetails"`
+	MasterFlightID         string       `json:"MasterFlightId"`
+	FlightIds              string       `json:"FlightIds"`
+	GateRef                string       `json:"GateRef"`
+	RegistrationRef        string       `json:"RegistrationRef"`
+	ConveyorBeltRef        string       `json:"ConveyorBeltRef"`
+	LastKenticoUpdate      string       `json:"LastKenticoUpdate"`
+	PlanePicto             string       `json:"PlanePicto"`
+	Via                    string       `json:"Via"`
+	ViaShort               string       `json:"ViaShort"`
+	IsLate                 bool         `json:"IsLate"`
+	//DScheduledFlight       GVATime `json:"dScheduledFlight"`
 }
 
 // FlightInfos is just a container for Arrivals and Departures
 type FlightInfos struct {
-	Arrivals   []Arrival   `json:"arrivals"`
-	Departures []Departure `json:"departures"`
-	LastUpdate string      `json:"lastUpdate"`
+	Flights []Flight `json:"d"`
 }
 
 // GetData fetches flight data newer than lastSync
 // from the remote API
-func (me *FlightInfos) GetData(lastSync time.Time) error {
+func (me *FlightInfos) GetData(dataType string) error {
 	cli := http.Client{
 		Timeout: time.Duration(APITimeout) * time.Second,
 	}
 
-	req, err := http.NewRequest(http.MethodGet, APIUrl, nil)
+	jsonQry := fmt.Sprintf(`{"datas":"{\"Type\":\"%s\", \"Culture\":\"en-GB\"}"}`, dataType)
+
+	req, err := http.NewRequest(http.MethodPost, APIUrl, bytes.NewBuffer([]byte(jsonQry)))
 	if err != nil {
 		fmt.Print(err)
 		return err
 	}
-	q := req.URL.Query()
-	q.Add("lastSync", lastSync.Format(ReqTimeFormat))
-	req.URL.RawQuery = q.Encode()
 	//fmt.Println(req.URL.String())
 
+	req.Header.Set("X-Requested-With", "XMLHttpRequest")
+	req.Header.Set("Content-Type", "application/json")
 	res, err := cli.Do(req)
 	if err != nil {
 		return err
@@ -169,6 +155,7 @@ func (me *FlightInfos) GetData(lastSync time.Time) error {
 	if err != nil {
 		return err
 	}
+
 	jsonErr := json.Unmarshal(body, &me)
 	if jsonErr != nil {
 		return jsonErr
@@ -179,82 +166,130 @@ func (me *FlightInfos) GetData(lastSync time.Time) error {
 	return nil
 }
 
+// Parses time and dates in GVATime and sorts slice entries accordingly
 func (me *FlightInfos) sortByScheduledDate() {
-	sort.Slice(me.Departures, func(i, j int) bool {
-		return me.Departures[i].DScheduledDeparture.Before(me.Departures[j].DScheduledDeparture.Time)
-	})
-	sort.Slice(me.Arrivals, func(i, j int) bool {
-		return me.Arrivals[i].DScheduledArrival.Before(me.Arrivals[j].DScheduledArrival.Time)
-	})
+	for i, f := range me.Flights {
+		me.Flights[i].DepartureExpected.Time, _ = time.Parse(JSONTimeFormat, fmt.Sprintf("%s %s", f.DepartureExpectedDate, f.DepartureExpectedTime))
+		me.Flights[i].DepartureScheduled.Time, _ = time.Parse(JSONTimeFormat, fmt.Sprintf("%s %s", f.DepartureScheduledDate, f.DepartureScheduledTime))
+
+		me.Flights[i].ArrivalExpected.Time, _ = time.Parse(JSONTimeFormat, fmt.Sprintf("%s %s", f.ArrivalExpectedDate, f.ArrivalExpectedTime))
+		me.Flights[i].ArrivalScheduled.Time, _ = time.Parse(JSONTimeFormat, fmt.Sprintf("%s %s", f.ArrivalScheduledDate, f.ArrivalScheduledTime))
+	}
+}
+
+func (me *FlightInfos) PrepareDeparturesTable(f []Flight) [][]string {
+	dataDep := [][]string{}
+	for _, dep := range f {
+
+		// Only show flights assigned to a gate
+		if len(dep.GateRef) < 2 {
+			continue
+		}
+
+		var flightIds = dep.MasterFlightID
+		if len(dep.FlightIds) > 1 && ShowCodeShare {
+			flightIds = fmt.Sprintf("%s (%s)", dep.MasterFlightID, dep.FlightIds)
+		}
+
+		dataDep = append(dataDep, []string{
+			dep.DepartureScheduled.String(),
+			dep.DepartureExpected.String(),
+			dep.Destination,
+			flightIds,
+			dep.Airline,
+			dep.GateRef,
+			dep.Aircraft,
+			dep.Status.String(),
+			dep.StatusDetails,
+		})
+	}
+
+	return dataDep
+}
+
+func (me *FlightInfos) PrepareArrivalsTable(f []Flight) [][]string {
+	dataArr := [][]string{}
+	for _, arr := range f {
+
+		// Hide not-expected flights or those without a status
+		if arr.ArrivalExpected.IsZero() && len(arr.Status.String()) < 10 {
+			continue
+		}
+
+		var flightIds = arr.MasterFlightID
+		if len(arr.FlightIds) > 0 && ShowCodeShare {
+			flightIds = fmt.Sprintf("%s (%s)", arr.MasterFlightID, arr.FlightIds)
+		}
+
+		dataArr = append(dataArr, []string{
+			arr.ArrivalScheduled.String(),
+			arr.ArrivalExpected.String(),
+			arr.DepartureScheduled.String(),
+			arr.Departure,
+			flightIds,
+			arr.Airline,
+			arr.ConveyorBeltRef,
+			arr.Aircraft,
+			arr.Status.String(),
+			arr.StatusDetails,
+		})
+	}
+
+	return dataArr
 }
 
 // PrintTable does the heavy lifting to print a nice table
-func (me *FlightInfos) PrintTable(headers []string, data [][]string) {
+func (me *FlightInfos) PrintTable(title string, headers []string, data [][]string) {
 	tab := tablewriter.NewWriter(os.Stdout)
 	tab.SetAutoWrapText(false)
 	tab.SetHeader(headers)
+	tab.SetCaption(true, title)
 	tab.AppendBulk(data)
 	tab.Render()
 }
 
 func init() {
-	flag.StringVar(&APIUrl, "api-url", "http://gva.atipik.ch/api2/flights", "API URL of remote webservice")
+	flag.StringVar(&APIUrl, "api-url", "https://www.gva.ch/CMSPages/WideGva/FlightApi.aspx/GetAllFlights", "API URL of remote webservice")
 	flag.IntVar(&APITimeout, "api-timeout", 10, "API reply timeout (in seconds)")
-	flag.BoolVar(&AllFlights, "all-flights", false, "Show all flights")
+	flag.BoolVar(&ShowCodeShare, "code-shares", false, "Show code shares")
+	flag.BoolVar(&Departures, "departures", false, "Show departures")
+	flag.BoolVar(&Arrivals, "arrivals", false, "Show arrivals")
 
 	flag.Parse()
 }
+
 func main() {
 
-	var lastSync time.Time
-	if !AllFlights {
-		lastSync = time.Now().Add(time.Minute * -15)
+	// If we hide everything, show arrivals by default
+	if !Departures && !Arrivals {
+		Arrivals = true
 	}
 
-	f := FlightInfos{}
-	f.GetData(lastSync)
-
-	fmt.Println("Departures:")
-	dataDep := [][]string{}
-	for _, dep := range f.Departures {
-		var airport = dep.SAirport
-		if dep.BControleDouane == "1" {
-			airport = fmt.Sprintf("%s %s", dep.SAirport, "[P]")
+	if Departures {
+		depFlights := FlightInfos{}
+		if err := depFlights.GetData("DEPARTURE"); err != nil {
+			log.Fatalf("Unable to fetch data from remote API: %s", err)
 		}
-		dataDep = append(dataDep, []string{
-			dep.DScheduledDeparture.String(),
-			dep.DPublicDeparture.String(),
-			airport,
-			dep.SFlightIdentity,
-			dep.SCompany,
-			dep.SGate,
-			dep.SAircraft,
-			dep.SAircraftRegistration,
-			dep.SFlightStatus.String(),
-		})
+		depFlights.sortByScheduledDate()
+		depTable := depFlights.PrepareDeparturesTable(depFlights.Flights)
+		depFlights.PrintTable(
+			"Departures",
+			[]string{"Scheduled", "Expected", "Dest", "Flight", "Airline", "Gate", "Aircraft", "Status", "Status detail"},
+			depTable,
+		)
 	}
-	f.PrintTable(
-		[]string{"Scheduled", "Expected", "Dest", "Flight", "Airline", "Gate", "Aircraft", "Reg", "Status"},
-		dataDep,
-	)
 
-	fmt.Println("Arrivals:")
-	dataArr := [][]string{}
-	for _, arr := range f.Arrivals {
-		dataArr = append(dataArr, []string{
-			arr.DScheduledArrival.String(),
-			arr.DPublicArrival.String(),
-			arr.SAirport,
-			arr.SFlightIdentity,
-			arr.SCompany,
-			arr.SCarousel,
-			arr.SAircraft,
-			arr.SAircraftRegistration,
-			arr.SFlightStatus.String(),
-		})
+	if Arrivals {
+		arrFlights := FlightInfos{}
+		if err := arrFlights.GetData("ARRIVAL"); err != nil {
+			log.Fatalf("Unable to fetch data from remote API: %s", err)
+		}
+		arrFlights.sortByScheduledDate()
+		arrTable := arrFlights.PrepareArrivalsTable(arrFlights.Flights)
+		arrFlights.PrintTable(
+			"Arrivals",
+			[]string{"Scheduled", "Expected", "Departed", "Source", "Flight", "Airline", "Belt", "Aircraft", "Status", "Status detail"},
+			arrTable,
+		)
 	}
-	f.PrintTable(
-		[]string{"Scheduled", "Expected", "Origin", "Flight", "Airline", "Belt", "Aircraft", "Reg", "Status"},
-		dataArr,
-	)
 }
