@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -21,7 +22,9 @@ var (
 	JSONTimeFormat    = "02.01.2006 15:04"
 	APIUrl            string
 	APITimeout        int
-	AllFlights        bool
+	Departures        bool
+	Arrivals          bool
+	ShowCodeShare     bool
 )
 
 // GVATime is just used to convert the "custom" date
@@ -184,7 +187,7 @@ func (me *FlightInfos) PrepareDeparturesTable(f []Flight) [][]string {
 		}
 
 		var flightIds = dep.MasterFlightID
-		if len(dep.FlightIds) > 1 {
+		if len(dep.FlightIds) > 1 && ShowCodeShare {
 			flightIds = fmt.Sprintf("%s (%s)", dep.MasterFlightID, dep.FlightIds)
 		}
 
@@ -214,7 +217,7 @@ func (me *FlightInfos) PrepareArrivalsTable(f []Flight) [][]string {
 		}
 
 		var flightIds = arr.MasterFlightID
-		if len(arr.FlightIds) > 0 {
+		if len(arr.FlightIds) > 0 && ShowCodeShare {
 			flightIds = fmt.Sprintf("%s (%s)", arr.MasterFlightID, arr.FlightIds)
 		}
 
@@ -236,10 +239,11 @@ func (me *FlightInfos) PrepareArrivalsTable(f []Flight) [][]string {
 }
 
 // PrintTable does the heavy lifting to print a nice table
-func (me *FlightInfos) PrintTable(headers []string, data [][]string) {
+func (me *FlightInfos) PrintTable(title string, headers []string, data [][]string) {
 	tab := tablewriter.NewWriter(os.Stdout)
 	tab.SetAutoWrapText(false)
 	tab.SetHeader(headers)
+	tab.SetCaption(true, title)
 	tab.AppendBulk(data)
 	tab.Render()
 }
@@ -247,32 +251,45 @@ func (me *FlightInfos) PrintTable(headers []string, data [][]string) {
 func init() {
 	flag.StringVar(&APIUrl, "api-url", "https://www.gva.ch/CMSPages/WideGva/FlightApi.aspx/GetAllFlights", "API URL of remote webservice")
 	flag.IntVar(&APITimeout, "api-timeout", 10, "API reply timeout (in seconds)")
-	flag.BoolVar(&AllFlights, "all-flights", false, "Show all flights")
+	flag.BoolVar(&ShowCodeShare, "code-shares", false, "Show code shares")
+	flag.BoolVar(&Departures, "departures", false, "Show departures")
+	flag.BoolVar(&Arrivals, "arrivals", false, "Show arrivals")
 
 	flag.Parse()
 }
+
 func main() {
 
-	if AllFlights {
-		fmt.Println("Departures")
+	// If we hide everything, show arrivals by default
+	if !Departures && !Arrivals {
+		Arrivals = true
+	}
+
+	if Departures {
 		depFlights := FlightInfos{}
-		depFlights.GetData("DEPARTURE")
+		if err := depFlights.GetData("DEPARTURE"); err != nil {
+			log.Fatalf("Unable to fetch data from remote API: %s", err)
+		}
 		depFlights.sortByScheduledDate()
 		depTable := depFlights.PrepareDeparturesTable(depFlights.Flights)
 		depFlights.PrintTable(
+			"Departures",
 			[]string{"Scheduled", "Expected", "Dest", "Flight", "Airline", "Gate", "Aircraft", "Status", "Status detail"},
 			depTable,
 		)
 	}
 
-	fmt.Println("Arrivals")
-	arrFlights := FlightInfos{}
-	arrFlights.GetData("ARRIVAL")
-	arrFlights.sortByScheduledDate()
-	arrTable := arrFlights.PrepareArrivalsTable(arrFlights.Flights)
-	arrFlights.PrintTable(
-		[]string{"Scheduled", "Expected", "Departed", "Source", "Flight", "Airline", "Belt", "Aircraft", "Status", "Status detail"},
-		arrTable,
-	)
-
+	if Arrivals {
+		arrFlights := FlightInfos{}
+		if err := arrFlights.GetData("ARRIVAL"); err != nil {
+			log.Fatalf("Unable to fetch data from remote API: %s", err)
+		}
+		arrFlights.sortByScheduledDate()
+		arrTable := arrFlights.PrepareArrivalsTable(arrFlights.Flights)
+		arrFlights.PrintTable(
+			"Arrivals",
+			[]string{"Scheduled", "Expected", "Departed", "Source", "Flight", "Airline", "Belt", "Aircraft", "Status", "Status detail"},
+			arrTable,
+		)
+	}
 }
