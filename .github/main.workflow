@@ -1,8 +1,8 @@
 workflow "Build" {
   on = "push"
   resolves = [
-    " linux/amd64"
-    " windows/amd64"
+    "build linux/amd64",
+    "build windows/amd64",
   ]
 }
 
@@ -26,8 +26,8 @@ actions "build windows/amd64" {
 workflow "Release" {
   on = "release"
   resolves = [
-    "release linux/amd64"
-    "release windows/amd64"
+    "release linux/amd64",
+    "release windows/amd64",
   ]
 }
 
