@@ -25,6 +25,7 @@ var (
 	Departures        bool
 	Arrivals          bool
 	ShowCodeShare     bool
+	ShowAllFlights    bool
 )
 
 // GVATime is just used to convert the "custom" date
@@ -181,7 +182,7 @@ func (me *FlightInfos) PrepareDeparturesTable(f []Flight) [][]string {
 	for _, dep := range f {
 
 		// Only show flights assigned to a gate
-		if len(dep.GateRef) < 2 {
+		if !ShowAllFlights && len(dep.GateRef) < 2 {
 			continue
 		}
 
@@ -211,7 +212,7 @@ func (me *FlightInfos) PrepareArrivalsTable(f []Flight) [][]string {
 	for _, arr := range f {
 
 		// Hide not-expected flights or those without a status
-		if arr.ArrivalExpected.IsZero() && len(arr.Status.String()) < 10 {
+		if !ShowAllFlights && arr.ArrivalExpected.IsZero() && len(arr.Status.String()) < 10 {
 			continue
 		}
 
@@ -253,6 +254,7 @@ func init() {
 	flag.BoolVar(&ShowCodeShare, "code-shares", false, "Show code shares")
 	flag.BoolVar(&Departures, "departures", false, "Show departures")
 	flag.BoolVar(&Arrivals, "arrivals", false, "Show arrivals")
+	flag.BoolVar(&ShowAllFlights, "all-flights", false, "Show all flights, despite of the status")
 
 	flag.Parse()
 }
