@@ -142,7 +142,8 @@ func (me *FlightInfos) GetData(dataType string) error {
 	//fmt.Println(req.URL.String())
 
 	req.Header.Set("X-Requested-With", "XMLHttpRequest")
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-type", "application/json")
 	res, err := cli.Do(req)
 	if err != nil {
 		return err
