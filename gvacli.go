@@ -216,7 +216,7 @@ func (me *FlightInfos) PrepareDeparturesTable(f []Flight) [][]string {
 		dataDep = append(dataDep, []string{
 			dep.ScheduledDeparture.String(),
 			dep.PublicDeparture.String(),
-			dep.Airport,
+			fmt.Sprintf("%s (%s)", dep.Airport, dep.AirportCodeDestination),
 			flightIds,
 			dep.Company,
 			dep.Gate,
@@ -252,7 +252,7 @@ func (me *FlightInfos) PrepareArrivalsTable(f []Flight) [][]string {
 			arr.ScheduledArrival.String(),
 			arr.PublicArrival.String(),
 			arr.DepartureFromPreviousAirport.String(),
-			arr.Airport,
+			fmt.Sprintf("%s (%s)", arr.Airport, arr.AirportCode),
 			flightIds,
 			arr.Company,
 			arr.Carousel,
