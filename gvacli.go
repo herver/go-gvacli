@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bytes"
+	"sort"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -18,8 +18,8 @@ import (
 
 // Some useful timestamps and values
 var (
-	DisplayTimeFormat = "02-01-2006 15:04"
-	JSONTimeFormat    = "02.01.2006 15:04"
+	DisplayTimeFormat = "02/01 15:04"
+	JSONTimeFormat    = "2006-01-02 15:04:05"
 	APIUrl            string
 	APITimeout        int
 	Departures        bool
@@ -28,16 +28,30 @@ var (
 	ShowAllFlights    bool
 )
 
-// GVATime is just used to convert the "custom" date
 type GVATime struct {
-	time.Time
+	time time.Time
 }
 
 func (me *GVATime) String() string {
-	if me.IsZero() {
+	if me.time.IsZero() {
 		return ""
 	}
-	return fmt.Sprintf(me.Format(DisplayTimeFormat))
+	return fmt.Sprintf(me.time.Format(DisplayTimeFormat))
+}
+
+func (me *GVATime) UnmarshalJSON(input []byte) error {
+    strInput := string(input)
+    strInput = strings.Trim(strInput, `"`)
+    if strInput == "null" {
+	return nil
+    }
+    newTime, err := time.Parse(JSONTimeFormat, strInput)
+    if err != nil {
+        return err
+    }
+
+    me.time = newTime
+    return nil
 }
 
 // FlightStatus is a dummy struct to allow Stringer() redef
@@ -85,62 +99,67 @@ func (me *FlightStatus) UnmarshalJSON(b []byte) (err error) {
 
 // Flight contains relevant data extracted during JSON unmarshalling
 type Flight struct {
-	ID                     string `json:"ID"`
-	Type                   string `json:"Type"`
-	DepartureScheduled     GVATime
-	DepartureScheduledTime string `json:"DepartureScheduledTime"`
-	DepartureScheduledDate string `json:"DepartureScheduledDate"`
-	DepartureExpected      GVATime
-	DepartureExpectedTime  string `json:"DepartureExpectedTime"`
-	DepartureExpectedDate  string `json:"DepartureExpectedDate"`
-	ArrivalScheduled       GVATime
-	ArrivalScheduledTime   string `json:"ArrivalScheduledTime"`
-	ArrivalScheduledDate   string `json:"ArrivalScheduledDate"`
-	ArrivalExpected        GVATime
-	ArrivalExpectedTime    string       `json:"ArrivalExpectedTime"`
-	ArrivalExpectedDate    string       `json:"ArrivalExpectedDate"`
-	Delay                  int          `json:"Delay"`
-	Destination            string       `json:"Destination"`
-	DestinationShort       string       `json:"DestinationShort"`
-	Departure              string       `json:"Departure"`
-	DepartureShort         string       `json:"DepartureShort"`
-	Airline                string       `json:"Airline"`
-	Aircraft               string       `json:"Aircraft"`
-	Name                   string       `json:"Name"`
-	Status                 FlightStatus `json:"Status"`
-	StatusClass            string       `json:"StatusClass"`
-	StatusDetails          string       `json:"StatusDetails"`
-	MasterFlightID         string       `json:"MasterFlightId"`
-	FlightIds              string       `json:"FlightIds"`
-	GateRef                string       `json:"GateRef"`
-	RegistrationRef        string       `json:"RegistrationRef"`
-	ConveyorBeltRef        string       `json:"ConveyorBeltRef"`
-	LastKenticoUpdate      string       `json:"LastKenticoUpdate"`
-	PlanePicto             string       `json:"PlanePicto"`
-	Via                    string       `json:"Via"`
-	ViaShort               string       `json:"ViaShort"`
-	IsLate                 bool         `json:"IsLate"`
-	//DScheduledFlight       GVATime `json:"dScheduledFlight"`
+	FlightIdentity			string	`json:"flight_identity"`
+	DisplayedFlightIdentity		string	`json:"displayed_flight_identity"`
+	Airport				string	`json:"airport"`
+	ViaAirport			string	`json:"via_airport"`
+	Carousel			string	`json:"carousel"`
+	Terminal			string	`json:"terminal"`
+	Aircraft			string	`json:"aircraft"`
+	FlightStatus			FlightStatus	`json:"flight_status"`
+	DisplayedMasterFlightCodes	string	`json:"displayed_master_flight_codes"`
+	Gate				string	`json:"gate"`
+	CheckinDesks			string	`json:"checkin_desks"`
+	DepartureBool			int	`json:"departure_bool"`
+	Company				string	`json:"company"`
+	AirportCode			string	`json:"airport_code"`
+	OriginCountry			string	`json:"origin_country"`
+	AirportCodeDestination		string	`json:"airport_code_destination"`
+	FlightType			string	`json:"flight_type"`
+	FlightDurationMinutes		int	`json:"flight_duration_minuts"`
+	ControleDouane			int	`json:"controle_douane"`
+	GateWalkTime			int	`json:"gate_walk_time"`
+	DelayMinutes			int	`json:"delay_minuts"`
+	FlightId			int	`json:"flight_id"`
+	AircraftId			int	`json:"aircraft_id"`
+	NextPublicAdvice		GVATime	`json:"next_public_advice"`
+	ScheduledDeparture		GVATime	`json:"scheduled_departure"`
+	ScheduledArrival		GVATime	`json:"scheduled_arrival"`
+	Departure			GVATime	`json:"departure"`
+	Arrival				GVATime	`json:"arrival"`
+	PublicArrival			GVATime	`json:"public_arrival"`
+	PublicDeparture			GVATime	`json:"public_departure"`
+	Airborn				GVATime	`json:"airborn"`
+	FirstPriorityBaggage		GVATime	`json:"first_priority_baggage"`
+	DepartureFromPreviousAirport	GVATime	`json:"departure_from_previous_airport"`
+	EstimatedLanding		GVATime	`json:"estimated_landing"`
+	EstimatedBoarding		GVATime	`json:"estimated_boarding"`
+	ScheduledFlight			GVATime	`json:"scheduled_flight"`
+	AircraftRegistration		string	`json:"aircraft_registration"`
+	State				string	`json:"state"`
+	LastUpdate			GVATime	`json:"last_update"`
+	AirportCity			string	`json:"airport_city"`
 }
 
 // FlightInfos is just a container for Arrivals and Departures
-type FlightInfos []Flight
+type FlightInfos struct {
+	Flights struct {
+		Arrivals   []Flight  `json:"arrivals"`
+		Departures []Flight  `json:"departures"`
+	} `json:"flights"`
+}
 
-// GetData fetches flight data newer than lastSync
-// from the remote API
-func (me *FlightInfos) GetData(dataType string) error {
+// GetData fetches flight data from the remote API
+func (me *FlightInfos) GetData() error {
 	cli := http.Client{
 		Timeout: time.Duration(APITimeout) * time.Second,
 	}
 
-	jsonQry := fmt.Sprintf(`{"datas":"{\"Type\":\"%s\", \"Culture\":\"en-GB\"}"}`, dataType)
-
-	req, err := http.NewRequest(http.MethodPost, APIUrl, bytes.NewBuffer([]byte(jsonQry)))
+	req, err := http.NewRequest(http.MethodPost, APIUrl, nil)
 	if err != nil {
 		fmt.Print(err)
 		return err
 	}
-	//fmt.Println(req.URL.String())
 
 	req.Header.Set("X-Requested-With", "XMLHttpRequest")
 	req.Header.Set("Accept", "application/json")
@@ -166,15 +185,13 @@ func (me *FlightInfos) GetData(dataType string) error {
 	return nil
 }
 
-// Parses time and dates in GVATime and sorts slice entries accordingly
-func (me *FlightInfos) sortByScheduledDate() {
-	for i, f := range *me {
-		(*me)[i].DepartureExpected.Time, _ = time.Parse(JSONTimeFormat, fmt.Sprintf("%s %s", f.DepartureExpectedDate, f.DepartureExpectedTime))
-		(*me)[i].DepartureScheduled.Time, _ = time.Parse(JSONTimeFormat, fmt.Sprintf("%s %s", f.DepartureScheduledDate, f.DepartureScheduledTime))
-
-		(*me)[i].ArrivalExpected.Time, _ = time.Parse(JSONTimeFormat, fmt.Sprintf("%s %s", f.ArrivalExpectedDate, f.ArrivalExpectedTime))
-		(*me)[i].ArrivalScheduled.Time, _ = time.Parse(JSONTimeFormat, fmt.Sprintf("%s %s", f.ArrivalScheduledDate, f.ArrivalScheduledTime))
-	}
+func (me *FlightInfos) sortByScheduledDate()  {
+	sort.Slice((*me).Flights.Arrivals, func(i, j int) bool {
+		return (*me).Flights.Arrivals[i].ScheduledArrival.time.Before((*me).Flights.Arrivals[j].ScheduledArrival.time)
+	})
+	sort.Slice((*me).Flights.Departures, func(i, j int) bool {
+		return (*me).Flights.Departures[i].ScheduledDeparture.time.Before((*me).Flights.Departures[j].ScheduledDeparture.time)
+	})
 }
 
 func (me *FlightInfos) PrepareDeparturesTable(f []Flight) [][]string {
@@ -182,25 +199,30 @@ func (me *FlightInfos) PrepareDeparturesTable(f []Flight) [][]string {
 	for _, dep := range f {
 
 		// Only show flights assigned to a gate
-		if !ShowAllFlights && len(dep.GateRef) < 2 {
+		if !ShowAllFlights && len(dep.Gate) < 2 {
 			continue
 		}
 
-		var flightIds = dep.MasterFlightID
-		if len(dep.FlightIds) > 1 && ShowCodeShare {
-			flightIds = fmt.Sprintf("%s (%s)", dep.MasterFlightID, dep.FlightIds)
+		// Show only today's flights
+		if !ShowAllFlights && dep.ScheduledDeparture.time.Day() != time.Now().Day() {
+			continue
+		}
+
+		var flightIds = dep.FlightIdentity
+		if len(dep.DisplayedMasterFlightCodes) > 1 && ShowCodeShare {
+			flightIds = fmt.Sprintf("%s (%s)", dep.FlightIdentity, dep.DisplayedMasterFlightCodes)
 		}
 
 		dataDep = append(dataDep, []string{
-			dep.DepartureScheduled.String(),
-			dep.DepartureExpected.String(),
-			dep.Destination,
+			dep.ScheduledDeparture.String(),
+			dep.PublicDeparture.String(),
+			dep.Airport,
 			flightIds,
-			dep.Airline,
-			dep.GateRef,
+			dep.Company,
+			dep.Gate,
 			dep.Aircraft,
-			dep.Status.String(),
-			dep.StatusDetails,
+			dep.AircraftRegistration,
+			dep.FlightStatus.String(),
 		})
 	}
 
@@ -212,26 +234,31 @@ func (me *FlightInfos) PrepareArrivalsTable(f []Flight) [][]string {
 	for _, arr := range f {
 
 		// Hide not-expected flights or those without a status
-		if !ShowAllFlights && arr.ArrivalExpected.IsZero() && len(arr.Status.String()) < 10 {
+		if !ShowAllFlights && arr.PublicArrival.time.IsZero() && len(arr.FlightStatus.String()) < 10 {
 			continue
 		}
 
-		var flightIds = arr.MasterFlightID
-		if len(arr.FlightIds) > 0 && ShowCodeShare {
-			flightIds = fmt.Sprintf("%s (%s)", arr.MasterFlightID, arr.FlightIds)
+		// Show only today's flights
+		if !ShowAllFlights && arr.ScheduledArrival.time.Day() != time.Now().Day() {
+			continue
+		}
+
+		var flightIds = arr.FlightIdentity
+		if len(arr.DisplayedMasterFlightCodes) > 0 && ShowCodeShare {
+			flightIds = fmt.Sprintf("%s (%s)", arr.FlightIdentity, arr.DisplayedMasterFlightCodes)
 		}
 
 		dataArr = append(dataArr, []string{
-			arr.ArrivalScheduled.String(),
-			arr.ArrivalExpected.String(),
-			arr.DepartureScheduled.String(),
-			arr.Departure,
+			arr.ScheduledArrival.String(),
+			arr.PublicArrival.String(),
+			arr.DepartureFromPreviousAirport.String(),
+			arr.Airport,
 			flightIds,
-			arr.Airline,
-			arr.ConveyorBeltRef,
+			arr.Company,
+			arr.Carousel,
 			arr.Aircraft,
-			arr.Status.String(),
-			arr.StatusDetails,
+			arr.AircraftRegistration,
+			arr.FlightStatus.String(),
 		})
 	}
 
@@ -249,7 +276,7 @@ func (me *FlightInfos) PrintTable(title string, headers []string, data [][]strin
 }
 
 func init() {
-	flag.StringVar(&APIUrl, "api-url", "https://www.gva.ch/api/v1/data/flights", "API URL of remote webservice")
+	flag.StringVar(&APIUrl, "api-url", "https://app4airport.com/api/flights", "API URL of remote webservice")
 	flag.IntVar(&APITimeout, "api-timeout", 10, "API reply timeout (in seconds)")
 	flag.BoolVar(&ShowCodeShare, "code-shares", false, "Show code shares")
 	flag.BoolVar(&Departures, "departures", false, "Show departures")
@@ -266,30 +293,24 @@ func main() {
 		Arrivals = true
 	}
 
+	info := FlightInfos{}
+	if err := info.GetData(); err != nil {
+		log.Fatalf("Unable to fetch data from remote API: %s", err)
+	}
 	if Departures {
-		depFlights := FlightInfos{}
-		if err := depFlights.GetData("DEPARTURE"); err != nil {
-			log.Fatalf("Unable to fetch data from remote API: %s", err)
-		}
-		depFlights.sortByScheduledDate()
-		depTable := depFlights.PrepareDeparturesTable(depFlights)
-		depFlights.PrintTable(
+		depTable := info.PrepareDeparturesTable(info.Flights.Departures)
+		info.PrintTable(
 			"Departures",
-			[]string{"Scheduled", "Expected", "Dest", "Flight", "Airline", "Gate", "Aircraft", "Status", "Status detail"},
+			[]string{"Scheduled", "Expected", "Dest", "Flight", "Airline", "Gate", "Aircraft", "Reg", "Status"},
 			depTable,
 		)
 	}
 
 	if Arrivals {
-		arrFlights := FlightInfos{}
-		if err := arrFlights.GetData("ARRIVAL"); err != nil {
-			log.Fatalf("Unable to fetch data from remote API: %s", err)
-		}
-		arrFlights.sortByScheduledDate()
-		arrTable := arrFlights.PrepareArrivalsTable(arrFlights)
-		arrFlights.PrintTable(
+		arrTable := info.PrepareArrivalsTable(info.Flights.Arrivals)
+		info.PrintTable(
 			"Arrivals",
-			[]string{"Scheduled", "Expected", "Departed", "Source", "Flight", "Airline", "Belt", "Aircraft", "Status", "Status detail"},
+			[]string{"Scheduled", "Expected", "Departed", "Source", "Flight", "Airline", "Belt", "Aircraft", "Reg", "Status"},
 			arrTable,
 		)
 	}
