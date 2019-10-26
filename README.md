@@ -1,4 +1,5 @@
-# go-gvacli
+# go-gvacli [![Actions Status](https://github.com/herver/go-gvacli/workflows/Build/badge.svg)](https://github.com/herver/go-gvacli/actions)
+
 
 Just a Go version of https://github.com/nbarrientos/gvacli for Linux and Windows (CLI)
 
