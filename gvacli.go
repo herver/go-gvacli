@@ -25,6 +25,7 @@ var (
 	Departures        bool
 	Arrivals          bool
 	ShowCodeShare     bool
+	ShowAllFlights    bool
 )
 
 // GVATime is just used to convert the "custom" date
@@ -123,9 +124,7 @@ type Flight struct {
 }
 
 // FlightInfos is just a container for Arrivals and Departures
-type FlightInfos struct {
-	Flights []Flight `json:"d"`
-}
+type FlightInfos []Flight
 
 // GetData fetches flight data newer than lastSync
 // from the remote API
@@ -144,7 +143,8 @@ func (me *FlightInfos) GetData(dataType string) error {
 	//fmt.Println(req.URL.String())
 
 	req.Header.Set("X-Requested-With", "XMLHttpRequest")
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-type", "application/json")
 	res, err := cli.Do(req)
 	if err != nil {
 		return err
@@ -168,12 +168,12 @@ func (me *FlightInfos) GetData(dataType string) error {
 
 // Parses time and dates in GVATime and sorts slice entries accordingly
 func (me *FlightInfos) sortByScheduledDate() {
-	for i, f := range me.Flights {
-		me.Flights[i].DepartureExpected.Time, _ = time.Parse(JSONTimeFormat, fmt.Sprintf("%s %s", f.DepartureExpectedDate, f.DepartureExpectedTime))
-		me.Flights[i].DepartureScheduled.Time, _ = time.Parse(JSONTimeFormat, fmt.Sprintf("%s %s", f.DepartureScheduledDate, f.DepartureScheduledTime))
+	for i, f := range *me {
+		(*me)[i].DepartureExpected.Time, _ = time.Parse(JSONTimeFormat, fmt.Sprintf("%s %s", f.DepartureExpectedDate, f.DepartureExpectedTime))
+		(*me)[i].DepartureScheduled.Time, _ = time.Parse(JSONTimeFormat, fmt.Sprintf("%s %s", f.DepartureScheduledDate, f.DepartureScheduledTime))
 
-		me.Flights[i].ArrivalExpected.Time, _ = time.Parse(JSONTimeFormat, fmt.Sprintf("%s %s", f.ArrivalExpectedDate, f.ArrivalExpectedTime))
-		me.Flights[i].ArrivalScheduled.Time, _ = time.Parse(JSONTimeFormat, fmt.Sprintf("%s %s", f.ArrivalScheduledDate, f.ArrivalScheduledTime))
+		(*me)[i].ArrivalExpected.Time, _ = time.Parse(JSONTimeFormat, fmt.Sprintf("%s %s", f.ArrivalExpectedDate, f.ArrivalExpectedTime))
+		(*me)[i].ArrivalScheduled.Time, _ = time.Parse(JSONTimeFormat, fmt.Sprintf("%s %s", f.ArrivalScheduledDate, f.ArrivalScheduledTime))
 	}
 }
 
@@ -182,7 +182,7 @@ func (me *FlightInfos) PrepareDeparturesTable(f []Flight) [][]string {
 	for _, dep := range f {
 
 		// Only show flights assigned to a gate
-		if len(dep.GateRef) < 2 {
+		if !ShowAllFlights && len(dep.GateRef) < 2 {
 			continue
 		}
 
@@ -212,7 +212,7 @@ func (me *FlightInfos) PrepareArrivalsTable(f []Flight) [][]string {
 	for _, arr := range f {
 
 		// Hide not-expected flights or those without a status
-		if arr.ArrivalExpected.IsZero() && len(arr.Status.String()) < 10 {
+		if !ShowAllFlights && arr.ArrivalExpected.IsZero() && len(arr.Status.String()) < 10 {
 			continue
 		}
 
@@ -249,11 +249,12 @@ func (me *FlightInfos) PrintTable(title string, headers []string, data [][]strin
 }
 
 func init() {
-	flag.StringVar(&APIUrl, "api-url", "https://www.gva.ch/CMSPages/WideGva/FlightApi.aspx/GetAllFlights", "API URL of remote webservice")
+	flag.StringVar(&APIUrl, "api-url", "https://www.gva.ch/api/v1/data/flights", "API URL of remote webservice")
 	flag.IntVar(&APITimeout, "api-timeout", 10, "API reply timeout (in seconds)")
 	flag.BoolVar(&ShowCodeShare, "code-shares", false, "Show code shares")
 	flag.BoolVar(&Departures, "departures", false, "Show departures")
 	flag.BoolVar(&Arrivals, "arrivals", false, "Show arrivals")
+	flag.BoolVar(&ShowAllFlights, "all-flights", false, "Show all flights, despite of the status")
 
 	flag.Parse()
 }
@@ -271,7 +272,7 @@ func main() {
 			log.Fatalf("Unable to fetch data from remote API: %s", err)
 		}
 		depFlights.sortByScheduledDate()
-		depTable := depFlights.PrepareDeparturesTable(depFlights.Flights)
+		depTable := depFlights.PrepareDeparturesTable(depFlights)
 		depFlights.PrintTable(
 			"Departures",
 			[]string{"Scheduled", "Expected", "Dest", "Flight", "Airline", "Gate", "Aircraft", "Status", "Status detail"},
@@ -285,7 +286,7 @@ func main() {
 			log.Fatalf("Unable to fetch data from remote API: %s", err)
 		}
 		arrFlights.sortByScheduledDate()
-		arrTable := arrFlights.PrepareArrivalsTable(arrFlights.Flights)
+		arrTable := arrFlights.PrepareArrivalsTable(arrFlights)
 		arrFlights.PrintTable(
 			"Arrivals",
 			[]string{"Scheduled", "Expected", "Departed", "Source", "Flight", "Airline", "Belt", "Aircraft", "Status", "Status detail"},
