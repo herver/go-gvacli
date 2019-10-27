@@ -5,6 +5,9 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [ 'darwin', 'windows', 'linux' ]
     steps:
 
     - name: Set up Go 1.13
@@ -16,11 +19,14 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v1
       
-    - name: Build
-      uses: sosedoff/actions/golang-build@master
+    - name: Build for ${{ matrix.target }}
+      env:
+        GOOS: ${{ matrix.target }}
+        GOARCH: amd64
+      run: go build -o go-gvacli_$GOOS_$GOARCH -v .
       
     - name: Save artifacts
       uses: actions/upload-artifact@v1
       with:
         name: go-gvacli-${{ matrix.os }}
-        path: .release/go-gvacli_*_amd64.zip
+        path: go-gvacli_*
