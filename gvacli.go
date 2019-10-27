@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"runtime"
 	"time"
 
 	"github.com/fatih/color"
@@ -61,29 +62,33 @@ type FlightStatus struct {
 
 // "Took off", "Cancelled, "Departed", "Boarding", "Go to gate"
 func (me *FlightStatus) String() string {
-	switch status := me.status; status {
-	case "Boarding":
-		c := color.New(color.FgGreen).Add(color.BlinkSlow)
-		return c.Sprintf(status)
-	case "Go to gate":
-		c := color.New(color.FgGreen).Add(color.BlinkSlow)
-		return c.Sprintf(status)
-	case "Arrived":
-		c := color.New(color.FgGreen).Add(color.BlinkSlow)
-		return c.Sprintf(status)
-	case "Departed":
-		c := color.New(color.FgYellow).Add(color.BlinkSlow)
-		return c.Sprintf(status)
-	case "Delayed":
-		c := color.New(color.FgYellow).Add(color.BlinkSlow)
-		return c.Sprintf(status)
-	case "Cancelled":
-		c := color.New(color.BgRed).Add(color.BlinkSlow)
-		return c.Sprintf(status)
-	default:
-		c := color.New(color.FgWhite)
-		return c.Sprintf(status)
-	}
+    if runtime.GOOS != "windows" {
+	    switch status := me.status; status {
+	    case "Boarding":
+		    c := color.New(color.FgGreen).Add(color.BlinkSlow)
+		    return c.Sprintf(status)
+	    case "Go to gate":
+		    c := color.New(color.FgGreen).Add(color.BlinkSlow)
+		    return c.Sprintf(status)
+	    case "Arrived":
+		    c := color.New(color.FgGreen).Add(color.BlinkSlow)
+		    return c.Sprintf(status)
+	    case "Departed":
+		    c := color.New(color.FgYellow).Add(color.BlinkSlow)
+		    return c.Sprintf(status)
+	    case "Delayed":
+		    c := color.New(color.FgYellow).Add(color.BlinkSlow)
+		    return c.Sprintf(status)
+	    case "Cancelled":
+		    c := color.New(color.BgRed).Add(color.BlinkSlow)
+		    return c.Sprintf(status)
+	    default:
+		    c := color.New(color.FgWhite)
+		    return c.Sprintf(status)
+	    }
+    } else {
+	    return me.status
+    }
 }
 
 // UnmarshalJSON is a custom parser for flight status
