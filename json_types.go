@@ -52,7 +52,7 @@ type Flight struct {
 	AirportCode                  string       `json:"airport_code"`
 	OriginCountry                string       `json:"origin_country"`
 	AirportCodeDestination       string       `json:"airport_code_destination"`
-	FlightType                   string       `json:"flight_type"`
+	FlightType                   FlightType   `json:"flight_type"`
 	FlightDurationMinutes        int          `json:"flight_duration_minuts"`
 	ControleDouane               int          `json:"controle_douane"`
 	GateWalkTime                 int          `json:"gate_walk_time"`

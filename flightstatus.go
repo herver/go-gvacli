@@ -41,3 +41,44 @@ func (me *FlightStatus) UnmarshalJSON(b []byte) (err error) {
 	me.status = s
 	return
 }
+
+type FlightType uint
+
+const (
+	FlightTypeSchengen = iota
+	FlightTypeInternational
+	FlightTypeFrance
+	FlightTypeOther
+	FlightTypeUnknown
+)
+
+func (me *FlightType) String() string {
+	switch *me {
+	case FlightTypeSchengen:
+		return "Schengen"
+	case FlightTypeInternational:
+		return "International"
+	case FlightTypeFrance:
+		return "France"
+	case FlightTypeOther:
+		return "Other" // Not clear
+	default:
+		return "Unknown"
+	}
+}
+
+func (me *FlightType) UnmarshalJSON(b []byte) (err error) {
+	switch strings.Trim(string(b), "\"") {
+	case "S":
+		*me = FlightTypeSchengen
+	case "I":
+		*me = FlightTypeInternational
+	case "F":
+		*me = FlightTypeFrance
+	case "O":
+		*me = FlightTypeOther
+	case "null":
+		*me = FlightTypeUnknown
+	}
+	return
+}
