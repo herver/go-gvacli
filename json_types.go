@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"gopkg.in/gookit/color.v1"
 )
 
 // GVATime wraps time for manual parsing
@@ -16,6 +18,17 @@ func (me *GVATime) String() string {
 		return ""
 	}
 	return fmt.Sprint(me.time.Format(DisplayTimeFormat))
+}
+
+func (actualTime *GVATime) StringDelay(scheduledTime GVATime) string {
+	delay := actualTime.time.Sub(scheduledTime.time)
+	if delay.Minutes() > BigDelayMinutes {
+		return color.Red.Sprintf(actualTime.String())
+	} else if delay.Minutes() > FairDelayMinutes {
+		return color.Yellow.Sprintf(actualTime.String())
+	} else {
+		return actualTime.String()
+	}
 }
 
 // UnmarshalJSON implements what is needed to turn JSON-like time in GVATime
