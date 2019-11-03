@@ -17,7 +17,11 @@ func (me *GVATime) String() string {
 	if me.time.IsZero() {
 		return ""
 	}
-	return fmt.Sprint(me.time.Format(DisplayTimeFormat))
+	if ShowAllFlights {
+		return fmt.Sprint(me.time.Format(LongDisplayTimeFormat))
+	} else {
+		return fmt.Sprint(me.time.Format(ShortDisplayTimeFormat))
+	}
 }
 
 func (actualTime *GVATime) StringDelay(scheduledTime GVATime) string {

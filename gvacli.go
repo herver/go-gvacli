@@ -10,7 +10,8 @@ import (
 var (
 	BigDelayMinutes	  float64 = 60
 	CacheTTLSeconds   float64 = 60
-	DisplayTimeFormat = "02/01 15:04"
+	LongDisplayTimeFormat = "02/01 15:04"
+	ShortDisplayTimeFormat = "15:04"
 	FairDelayMinutes  float64 = 30
 	JSONTimeFormat    = "2006-01-02 15:04:05"
 	APIUrl            string
