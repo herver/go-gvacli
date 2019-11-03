@@ -24,6 +24,8 @@ func (me *FlightStatus) String() string {
 		return color.Primary.Sprintf(status)
 	case "Delayed":
 		return color.Danger.Sprintf(status)
+	case "Next Info":
+		return color.Danger.Sprintf("Delayed")
 	case "Cancelled":
 		return color.Error.Sprintf(status)
 	default:
