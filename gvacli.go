@@ -9,6 +9,7 @@ import (
 // Some useful timestamps and values
 var (
 	BigDelayMinutes	  float64 = 60
+	CacheTTLSeconds   float64 = 60
 	DisplayTimeFormat = "02/01 15:04"
 	FairDelayMinutes  float64 = 30
 	JSONTimeFormat    = "2006-01-02 15:04:05"
@@ -16,6 +17,7 @@ var (
 	APITimeout        int
 	Departures        bool
 	Arrivals          bool
+	NoCache           bool
 	ShowCodeShare     bool
 	ShowAllFlights    bool
 )
@@ -27,6 +29,7 @@ func init() {
 	flag.BoolVar(&Departures, "departures", false, "Show departures")
 	flag.BoolVar(&Arrivals, "arrivals", false, "Show arrivals")
 	flag.BoolVar(&ShowAllFlights, "all-flights", false, "Show all flights, despite of the status")
+	flag.BoolVar(&NoCache, "no-cache", false, "Ignored cached data")
 
 	flag.Parse()
 }
@@ -38,7 +41,7 @@ func main() {
 		Arrivals = true
 	}
 
-	info := FlightInfos{}
+	info := NewFlightInfos()
 	if err := info.GetData(); err != nil {
 		log.Fatalf("Unable to fetch data from remote API: %s", err)
 	}

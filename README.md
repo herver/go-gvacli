@@ -11,6 +11,7 @@ Just a Go version of https://github.com/nbarrientos/gvacli for Linux, MacOS and 
 * `--arrivals`: Show arrivals (default)
 * `--code-shares`: Show code shares on flights
 * `--departures`: Show departures
+* `--no-cache`: Ignore the local cache and force a call to the API
 
 ## Screenshot
 
