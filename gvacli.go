@@ -8,19 +8,19 @@ import (
 
 // Some useful timestamps and values
 var (
-	BigDelayMinutes	  float64 = 60
-	CacheTTLSeconds   float64 = 60
-	LongDisplayTimeFormat = "02/01 15:04"
-	ShortDisplayTimeFormat = "15:04"
-	FairDelayMinutes  float64 = 30
-	JSONTimeFormat    = "2006-01-02 15:04:05"
-	APIUrl            string
-	APITimeout        int
-	Departures        bool
-	Arrivals          bool
-	NoCache           bool
-	ShowCodeShare     bool
-	ShowAllFlights    bool
+	APITimeout             int
+	APIUrl                 string
+	Arrivals               bool
+	BigDelayMinutes        float64 = 60
+	CacheTTLSeconds        float64 = 60
+	Departures             bool
+	FairDelayMinutes       float64 = 30
+	JSONTimeFormat                 = "2006-01-02 15:04:05"
+	LongDisplayTimeFormat          = "02/01 15:04"
+	NoCache                bool
+	ShortDisplayTimeFormat         = "15:04"
+	ShowAllFlights         bool
+	ShowCodeShare          bool
 )
 
 func init() {
