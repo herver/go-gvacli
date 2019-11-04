@@ -50,7 +50,7 @@ func main() {
 		depTable := info.PrepareDeparturesTable(info.Flights.Departures)
 		info.PrintTable(
 			"Departures",
-			[]string{"Scheduled", "Expected", "Dest", "Flight", "Airline", "Gate", "Aircraft", "Reg", "Status"},
+			[]string{"Sched", "Exp", "Dest", "Flight", "Airline", "Gate", "Aircraft", "Reg", "Status"},
 			depTable,
 		)
 	}
@@ -59,7 +59,7 @@ func main() {
 		arrTable := info.PrepareArrivalsTable(info.Flights.Arrivals)
 		info.PrintTable(
 			"Arrivals",
-			[]string{"Scheduled", "Expected", "Departed", "Source", "Flight", "Airline", "Belt", "Aircraft", "Reg", "Status"},
+			[]string{"Sched", "Exp", "Dep", "Source", "Flight", "Airline", "Belt", "Aircraft", "Reg", "Status"},
 			arrTable,
 		)
 	}
