@@ -8,18 +8,19 @@ import (
 
 // Some useful timestamps and values
 var (
-	BigDelayMinutes	  float64 = 60
-	CacheTTLSeconds   float64 = 60
-	DisplayTimeFormat = "02/01 15:04"
-	FairDelayMinutes  float64 = 30
-	JSONTimeFormat    = "2006-01-02 15:04:05"
-	APIUrl            string
-	APITimeout        int
-	Departures        bool
-	Arrivals          bool
-	NoCache           bool
-	ShowCodeShare     bool
-	ShowAllFlights    bool
+	APITimeout             int
+	APIUrl                 string
+	Arrivals               bool
+	BigDelayMinutes        float64 = 60
+	CacheTTLSeconds        float64 = 60
+	Departures             bool
+	FairDelayMinutes       float64 = 30
+	JSONTimeFormat                 = "2006-01-02 15:04:05"
+	LongDisplayTimeFormat          = "02/01 15:04"
+	NoCache                bool
+	ShortDisplayTimeFormat         = "15:04"
+	ShowAllFlights         bool
+	ShowCodeShare          bool
 )
 
 func init() {
@@ -49,7 +50,7 @@ func main() {
 		depTable := info.PrepareDeparturesTable(info.Flights.Departures)
 		info.PrintTable(
 			"Departures",
-			[]string{"Scheduled", "Expected", "Dest", "Flight", "Airline", "Gate", "Aircraft", "Reg", "Status"},
+			[]string{"Sched", "Exp", "Dest", "Flight", "Airline", "Gate", "Aircraft", "Reg", "Status"},
 			depTable,
 		)
 	}
@@ -58,7 +59,7 @@ func main() {
 		arrTable := info.PrepareArrivalsTable(info.Flights.Arrivals)
 		info.PrintTable(
 			"Arrivals",
-			[]string{"Scheduled", "Expected", "Departed", "Source", "Flight", "Airline", "Belt", "Aircraft", "Reg", "Status"},
+			[]string{"Sched", "Exp", "Dep", "Source", "Flight", "Airline", "Belt", "Aircraft", "Reg", "Status"},
 			arrTable,
 		)
 	}
