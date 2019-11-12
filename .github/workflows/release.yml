@@ -25,8 +25,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ github.event.release.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-        asset_path: ./go-gva-cli
-        asset_name: go-gva-cli_${{ github.event.release.tag_name}}_linux_amd64
+        asset_path: ./go-gvacli
+        asset_name: go-gvacli_${{ github.event.release.tag_name}}_linux_amd64
         asset_content_type: application/binary
 
   release-darwin-amd64:
