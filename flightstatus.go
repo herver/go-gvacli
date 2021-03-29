@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"gopkg.in/gookit/color.v1"
+	"github.com/jwalton/gchalk"
 )
 
 // FlightStatus is a dummy struct to allow Stringer() redef
@@ -15,21 +15,21 @@ type FlightStatus struct {
 func (me *FlightStatus) String() string {
 	switch status := me.status; status {
 	case "Boarding":
-		return color.Question.Sprintf(status)
+		return gchalk.WithBrightMagenta().Bold(status)
 	case "Go to gate":
-		return color.Note.Sprintf(status)
+		return gchalk.WithBrightCyan().Bold(status)
 	case "Arrived":
-		return color.Info.Sprintf(status)
+		return gchalk.Green(status)
 	case "Departed":
-		return color.Primary.Sprintf(status)
+		return gchalk.Blue(status)
 	case "Delayed":
-		return color.Danger.Sprintf(status)
+		return gchalk.Yellow(status)
 	case "Next Info":
-		return color.Danger.Sprintf("Delayed")
+		return gchalk.WithWhite().BgYellow("Delayed")
 	case "Cancelled":
-		return color.Error.Sprintf(status)
+		return gchalk.WithWhite().WithBgRed().Bold(status)
 	default:
-		return color.Success.Sprintf(status)
+		return gchalk.WithGreen().Bold(status)
 	}
 }
 
