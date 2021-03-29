@@ -19,38 +19,38 @@ type FlightInfos struct {
 		Arrivals   []Flight `json:"arrivals"`
 		Departures []Flight `json:"departures"`
 	} `json:"flights"`
-	cache_file_path string
-	cache_available bool
+	cacheFilePath  string
+	cacheAvailable bool
 }
 
 func NewFlightInfos() *FlightInfos {
 	c := FlightInfos{}
-	user_cache_dir, err := os.UserCacheDir()
+	userCacheDir, err := os.UserCacheDir()
 	if err != nil {
 		log.Printf("Unable to determine local user cache directory")
-		c.cache_available = false
+		c.cacheAvailable = false
 	}
-	cache_dir := fmt.Sprintf("%s/gvacli", user_cache_dir)
+	cacheDir := fmt.Sprintf("%s/gvacli", userCacheDir)
 
-	if _, err := os.Stat(cache_dir); os.IsNotExist(err) {
-		err := os.Mkdir(cache_dir, 0755)
+	if _, err := os.Stat(cacheDir); os.IsNotExist(err) {
+		err := os.Mkdir(cacheDir, 0755)
 		if err != nil {
 			log.Printf("Unable to create cache directory")
-			c.cache_available = false
+			c.cacheAvailable = false
 		}
 	}
-	c.cache_available = true
-	c.cache_file_path = fmt.Sprintf("%s/flightinfos.json", cache_dir)
+	c.cacheAvailable = true
+	c.cacheFilePath = fmt.Sprintf("%s/flightinfos.json", cacheDir)
 	return &c
 }
 
 func (me *FlightInfos) cacheCanBeConsumed() bool {
-	if NoCache || !me.cache_available {
+	if NoCache || !me.cacheAvailable {
 		return false
 	}
-	if cache_info, err := os.Stat(me.cache_file_path); err == nil {
-		cache_age_seconds := time.Now().Sub(cache_info.ModTime()).Seconds()
-		if cache_info.Size() > 0 && cache_age_seconds < CacheTTLSeconds {
+	if cacheInfo, err := os.Stat(me.cacheFilePath); err == nil {
+		cacheAgeSeconds := time.Now().Sub(cacheInfo.ModTime()).Seconds()
+		if cacheInfo.Size() > 0 && cacheAgeSeconds < CacheTTLSeconds {
 			return true
 		}
 	}
@@ -58,11 +58,11 @@ func (me *FlightInfos) cacheCanBeConsumed() bool {
 }
 
 func (me *FlightInfos) cacheRead() ([]byte, error) {
-	return ioutil.ReadFile(me.cache_file_path)
+	return ioutil.ReadFile(me.cacheFilePath)
 }
 
 func (me *FlightInfos) cacheWrite(data []byte) {
-	err := ioutil.WriteFile(me.cache_file_path, data, 0644)
+	err := ioutil.WriteFile(me.cacheFilePath, data, 0644)
 	if err != nil {
 		log.Printf("Unable to write cache file (%s)", err)
 	}
@@ -92,7 +92,7 @@ func (me *FlightInfos) getDataFromNetwork() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if me.cache_available {
+	if me.cacheAvailable {
 		me.cacheWrite(body)
 	}
 	return body, nil

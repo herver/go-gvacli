@@ -19,19 +19,18 @@ func (me *GVATime) String() string {
 	}
 	if ShowAllFlights {
 		return fmt.Sprint(me.time.Format(LongDisplayTimeFormat))
-	} else {
-		return fmt.Sprint(me.time.Format(ShortDisplayTimeFormat))
 	}
+	return fmt.Sprint(me.time.Format(ShortDisplayTimeFormat))
 }
 
-func (actualTime *GVATime) StringDelay(scheduledTime GVATime) string {
-	delay := actualTime.time.Sub(scheduledTime.time)
+func (me *GVATime) StringDelay(scheduledTime GVATime) string {
+	delay := me.time.Sub(scheduledTime.time)
 	if delay.Minutes() > BigDelayMinutes {
-		return color.Red.Sprintf(actualTime.String())
+		return color.Red.Sprintf(me.String())
 	} else if delay.Minutes() > FairDelayMinutes {
-		return color.Yellow.Sprintf(actualTime.String())
+		return color.Yellow.Sprintf(me.String())
 	} else {
-		return actualTime.String()
+		return me.String()
 	}
 }
 
