@@ -10,20 +10,20 @@ jobs:
         os: [ubuntu-latest, windows-latest, macOS-latest]
     steps:
 
-    - name: Set up Go 1.13
-      uses: actions/setup-go@v1
+    - name: Set up Go 1.19
+      uses: actions/setup-go@v3
       with:
-        go-version: 1.13
+        go-version: 1.19
       id: go
 
     - name: Check out code into the Go module directory
-      uses: actions/checkout@v1
-      
+      uses: actions/checkout@v3
+
     - name: Build
       run: go build -o go-gvacli -v .
-      
+
     - name: Save artifacts
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: go-gvacli-${{ matrix.os }}
         path: go-gvacli
